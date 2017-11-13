@@ -11,22 +11,22 @@
 //	Note 3:	ADD and CAD do not affect the overflow flag.
 //	Note 4: Code relies on AC being 8 bit and P0-P3 being 16 bit.
 
-:#define 	READ(x) 		memory[(x) & 0xFFF]
-:#define 	WRITE(x)		memory[(x) & 0xFFF] = AC
+:#define 	READ(x) 		ramMemory[(x) & 0xFFF]
+:#define 	WRITE(x)		ramMemory[(x) & 0xFFF] = AC
 :#define 	FETCH()			READ(++P0)
 
 :#define 	EACIX(p)		_eacix(p)
-:#define 	EACIXNOE(p)		_eaci5E(p)
+:#define 	EACIXNOE(p)		_eacixnoe(p)
 :#define 	EACAIX(p) 		_eacaix(&p)
 
 :static inline WORD16 _eacix(WORD16 p) {
 :	T8 = FETCH();
 :	if (T8 == 0x80) T8 = E;
-:	if (T8 & 0x80) return (T8 | 0xFF00) + p
+:	if (T8 & 0x80) return (T8 | 0xFF00) + p;
 :	return T8 + p;
 :}
 
-:static inline WORD16 _eacix(WORD16 *p) {
+:static inline WORD16 _eacaix(WORD16 *p) {
 :	T8 = FETCH();
 :	if (T8 == 0x80) T8 = E;
 :	if (T8 & 0x80) {
@@ -39,9 +39,9 @@
 :	}
 :}
 
-:static inline WORD16 _eaci5E(WORD16 p) {
+:static inline WORD16 _eacixnoe(WORD16 p) {
 :	T8 = FETCH();
-:	if (T8 & 0x80) return (T8 | 0xFF00) + p
+:	if (T8 & 0x80) return (T8 | 0xFF00) + p;
 :	return T8 + p;
 :}
 
@@ -78,16 +78,16 @@ ED-EF 	23 	"DAD @%D(P%P)"		T8 = READ(EACAIX(P%P));_decimalAdd()
 68 		11 	"DAE"				T8 = E;_decimalAdd()
 
 :static void _decimalAdd() {
-:	WORD16 r = (T8 & 0x0F) + (AC & 0x0F) + CARRY;	
-:	if (r >= 10) {
-:		r = r + 0x06;
+:	T16 = (T8 & 0x0F) + (AC & 0x0F) + CARRY;	
+:	if (T16>= 10) {
+:		T16 = T16 + 0x06;
 :	}
-:	r = r + (T8 & 0xF0) + (AC & 0xF0);
+:	T16 = T16 + (T8 & 0xF0) + (AC & 0xF0);
 :	CARRY = 0;
-:	if (r > 0x99) {
-:		r = r + 0x60;CARRY = 1;	
+:	if (T16 > 0x99) {
+:		T16 = T16+ 0x60;CARRY = 1;	
 :	}
-:	AC = r & 0xFF;
+:	AC = T16 & 0xFF;
 :}
 
 F0-F3 	19	"ADD %D(P%P)"		T8 = READ(EACIX(P%P));BINARYADD()
@@ -153,5 +153,5 @@ B8-BB 	22 	"DLD %D(P%P)"		T16 = EACIXNOE(P%P);AC = READ(T16)-1;WRITE(T16)
 
 //	Note, 4 cycles are lost for every number in DELAY4CYCLES to make it a WORD16
 
-8F 		13 	"DLY %C" 			T8 = FETCH();DELAY4CYCLES = AC / 2 + T8 / 2 + T8 * 128;AC = 0
+8F 		13 	"DLY %C" 			T8 = FETCH();DELAY4CYCLES = AC / 2 + T8 / 2 + T8 * 128;AC = 0xFF
 
