@@ -1,0 +1,157 @@
+// ***************************************************************************************
+// ***************************************************************************************
+//
+//							C Optimised SC/MP generator.
+//
+// ***************************************************************************************
+// ***************************************************************************************
+
+//	Note 1: EAC are setup with 4k in mind, e.g. do not wrap around in same page.
+//	Note 2: FETCH() does not increment P0 correctly
+//	Note 3:	ADD and CAD do not affect the overflow flag.
+//	Note 4: Code relies on AC being 8 bit and P0-P3 being 16 bit.
+
+:#define 	READ(x) 		memory[(x) & 0xFFF]
+:#define 	WRITE(x)		memory[(x) & 0xFFF] = AC
+:#define 	FETCH()			READ(++P0)
+
+:#define 	EACIX(p)		_eacix(p)
+:#define 	EACIXNOE(p)		_eaci5E(p)
+:#define 	EACAIX(p) 		_eacaix(&p)
+
+:static inline WORD16 _eacix(WORD16 p) {
+:	T8 = FETCH();
+:	if (T8 == 0x80) T8 = E;
+:	if (T8 & 0x80) return (T8 | 0xFF00) + p
+:	return T8 + p;
+:}
+
+:static inline WORD16 _eacix(WORD16 *p) {
+:	T8 = FETCH();
+:	if (T8 == 0x80) T8 = E;
+:	if (T8 & 0x80) {
+:		*p += (T8 | 0xFF00);
+:		return *p;	
+:	} else {
+:		T16 = *p;
+:		*p += T8;
+:		return T16;
+:	}
+:}
+
+:static inline WORD16 _eaci5E(WORD16 p) {
+:	T8 = FETCH();
+:	if (T8 & 0x80) return (T8 | 0xFF00) + p
+:	return T8 + p;
+:}
+
+// ***************************************************************************************
+
+C0-C3 	18	"LD %D(P%P)"		AC = READ(EACIX(P%P))
+C4 		10 	"LDI %C"			AC = FETCH()
+C5-C7 	18 	"LD @%D(P%P)"		AC = READ(EACAIX(P%P))
+40 		6 	"LDE"				AC = E
+
+01 		7 	"XAE"				T8 = AC;AC = E;E = T8
+
+C8-CB 	18	"ST %D(P%P)"		WRITE(EACIX(P%P))
+CD-CF 	18 	"ST @%D(P%P)"		WRITE(EACAIX(P%P))
+
+D0-D3 	18	"AND %D(P%P)"		AC &= READ(EACIX(P%P))
+D4 		10 	"ANI %C"			AC &= FETCH()
+D5-D7 	18 	"AND @%D(P%P)"		AC &= READ(EACAIX(P%P))
+50 		6 	"ANE"				AC &= E
+
+D8-DB 	18	"OR %D(P%P)"		AC |= READ(EACIX(P%P))
+DC 		10 	"ORI %C"			AC |= FETCH()
+DD-DF 	18 	"OR @%D(P%P)"		AC |= READ(EACAIX(P%P))
+58 		6 	"ORE"				AC |= E
+
+E0-E3 	18	"XOR %D(P%P)"		AC ^= READ(EACIX(P%P))
+E4 		10 	"XRI %C"			AC ^= FETCH()
+E5-E7 	18 	"XOR @%D(P%P)"		AC ^= READ(EACAIX(P%P))
+60 		6 	"XRE"				AC ^= E
+
+E8-EB 	23	"DAD %D(P%P)"		T8 = READ(EACIX(P%P));_decimalAdd()
+EC 		15 	"DAI %C"			T8 = FETCH();_decimalAdd()
+ED-EF 	23 	"DAD @%D(P%P)"		T8 = READ(EACAIX(P%P));_decimalAdd()
+68 		11 	"DAE"				T8 = E;_decimalAdd()
+
+:static void _decimalAdd() {
+:	WORD16 r = (T8 & 0x0F) + (AC & 0x0F) + CARRY;	
+:	if (r >= 10) {
+:		r = r + 0x06;
+:	}
+:	r = r + (T8 & 0xF0) + (AC & 0xF0);
+:	CARRY = 0;
+:	if (r > 0x99) {
+:		r = r + 0x60;CARRY = 1;	
+:	}
+:	AC = r & 0xFF;
+:}
+
+F0-F3 	19	"ADD %D(P%P)"		T8 = READ(EACIX(P%P));BINARYADD()
+F4 		11 	"ADI %C"			T8 = FETCH();BINARYADD()
+F5-F7 	19 	"ADD @%D(P%P)"		T8 = READ(EACAIX(P%P));BINARYADD()
+70 		7 	"ADE"				T8 = E;BINARYADD()
+
+F8-FB 	20	"CAD %D(P%P)"		T8 = READ(EACIX(P%P)) ^ 0xFF;BINARYADD()
+FC 		12 	"CAI %C"			T8 = FETCH() ^ 0xFF;BINARYADD()
+FD-FF 	20 	"CAD @%D(P%P)"		T8 = READ(EACAIX(P%P)) ^ 0xFF;BINARYADD()
+78 		8 	"CAE"				T8 = E ^ 0xFF;BINARYADD()
+
+:#define BINARYADD() 	T16 = CARRY+AC+T8;OVERFLOW();AC = T16 & 0xFF;CARRY = (T16 >> 8) & 1
+:#define OVERFLOW() 	{}
+
+// ***************************************************************************************
+
+A8-AB 	22 	"ILD %D(P%P)"		T16 = EACIXNOE(P%P);AC = READ(T16)+1;WRITE(T16)
+B8-BB 	22 	"DLD %D(P%P)"		T16 = EACIXNOE(P%P);AC = READ(T16)-1;WRITE(T16)
+
+// ***************************************************************************************
+
+90-93 	10 	"JMP %A(P%P)"		P0 = EACIXNOE(P%P)
+94-97 	10 	"JP %A(P%P)"		T16 = EACIXNOE(P%P);if ((AC & 0x80) == 0) P0 = T16
+98-9B 	10 	"JZ %A(P%P)"		T16 = EACIXNOE(P%P);if (AC == 0) P0 = T16
+9C-9F 	10 	"JNZ %A(P%P)"		T16 = EACIXNOE(P%P);if (AC != 0) P0 = T16
+
+// ***************************************************************************************
+
+30-33 	8 	"XPAL P%P"			T8 = P%P;P%P |= ((P%P & 0xFF00)|AC);AC = T8
+34-37 	8 	"XPAH P%P"			T8 = (P%P >> 8);P%P |= ((P%P & 0x00FF)|(AC << 8));AC = T8
+3C-3F 	7 	"XPPC P%P"			T16 = P0;P0 = P%P;P%P = T16
+
+// ***************************************************************************************
+
+19 		5 	"SIO"				SOUT(E&1);E = (E >> 1) | (SIN() ? 0x80:0x00)
+1C 		5 	"SR"				AC = AC >> 1
+1D 		5 	"SRL"				AC = (AC >> 1)|(CARRY << 7)
+1E		5 	"RR"				AC = (AC >> 1)|(AC << 7)
+1F 		5 	"RRL"				T16 = AC|(CARRY << 8);CARRY = T16 & 1;AC = T16 >> 1
+
+// ***************************************************************************************
+
+00		8	"HALT"				;
+02 		5 	"CCL"				CARRY = 0
+03 		5 	"SCL"				CARRY = 1
+05 		6 	"IEN"				STATUS |= 0x08
+04		6 	"DINT"				STATUS &= 0xF7
+06 		5 	"CSA"				UPDATESASB();UPDATEOVCY();AC = STATUS
+07 		6 	"CAS"				STATUS = AC;OVERFLOW = (AC >> 6) & 1;CARRY = (AC >> 7) & 1;UPDATESASB();FLAGS(AC & 7)
+
+:#define UPDATESASB()	STATUS = (STATUS & 0xCF) | (SENSEA() ? 0x10:0x00) | (SENSEB() ? 0x20:0x00);
+:#define UPDATEOVCY() 	STATUS = (STATUS & 0x3F) | (OVERFLOW << 6) | (CARRY << 7);	
+
+:static BYTE8 getStatus() {
+:	UPDATESASB();UPDATEOVCY();
+:	return STATUS;	
+:}
+
+08 		5 	"NOP"				;
+
+// ***************************************************************************************
+
+//	Note, 4 cycles are lost for every number in DELAY4CYCLES to make it a WORD16
+
+8F 		13 	"DLY %C" 			T8 = FETCH();DELAY4CYCLES = AC / 2 + T8 / 2 + T8 * 128;AC = 0
+
