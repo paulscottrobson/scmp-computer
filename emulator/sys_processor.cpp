@@ -42,11 +42,11 @@ void CPUReset(void) {
 //												  CPU Support Functions
 // *******************************************************************************************************************************
 
-#define SIN() 		(0)
+#define SIN() 		HWIWaitNewDisplayScan()
 #define SOUT(bit) 	{}
 #define FLAGS(bits)	{}
-#define SENSEA() 	(0)
-#define SENSEB()	(0)
+#define SENSEA() 	HWICheckSenseLine('A')
+#define SENSEB()	HWICheckSenseLine('B')
 
 #include "_scmp_support.h"
 
@@ -61,13 +61,15 @@ BYTE8 CPUExecuteInstruction(void) {
 
 	if (DELAY4CYCLES == 0) {
 		T8 = FETCH();
+		if (T8 == 0x8F) {
+			if (READ(P0+1) == 3) HWINextDisplayScanPulse(getStatus());
+		}
 		switch(T8) {																// Do the selected opcode and phase.
 			#include "_scmp_case.h"
 		}
 	}
 
 	if (DELAY4CYCLES != 0) {														// DLY in progress
-		printf("%d\n",DELAY4CYCLES);
 		WORD16 remCycles = CYCLES_PER_FRAME - CYCLES;								// CYCLES left this frame
 		if (remCycles/4 < DELAY4CYCLES) {											// Not enough cycles
 			DELAY4CYCLES = DELAY4CYCLES - remCycles / 4;

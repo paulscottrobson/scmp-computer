@@ -49,11 +49,16 @@
 
 */
 
+static BYTE8 currentKeyLine;
+static const char *kbChars = "0.%:*-+=C?";
+static const char *kcChars = "987654321?";
+
 // *******************************************************************************************************************************
 //											Hardware Reset
 // *******************************************************************************************************************************
 
 void HWIReset(void) {
+	currentKeyLine = 0xFF;
 }
 
 // *******************************************************************************************************************************
@@ -64,9 +69,46 @@ void HWIEndFrame() {
 }
 
 // *******************************************************************************************************************************
+//										Read Display Scan via SIN
+// *******************************************************************************************************************************
+
+BYTE8 HWIWaitNewDisplayScan(void) {
+	currentKeyLine = 0;
+	//printf("Key line now %d\n",currentKeyLine);
+	return 1;
+}
+
+// *******************************************************************************************************************************
+//								Switch one pulse time to next scan
+// *******************************************************************************************************************************
+
+void  HWINextDisplayScanPulse(BYTE8 status) {
+
+	if (status & 1) {
+		HWIEmulateKeyPress(kcChars[currentKeyLine]);
+	}
+	if (status & 2) {
+		HWIEmulateKeyPress(kbChars[currentKeyLine]);
+	}	
+	currentKeyLine++;
+	if (currentKeyLine == 9) currentKeyLine = 0xFF;
+	//printf("Key line now %d\n",currentKeyLine);
+}
+
+// *******************************************************************************************************************************
 //						 Read current digit for a given digit (0 = right most)
 // *******************************************************************************************************************************
 
 BYTE8 HWIGetDisplayDigit(BYTE8 digit) {
 	return (digit & 1) ? digit : digit+16;
+}
+
+BYTE8 HWICheckSenseLine(char sense) {
+	if (currentKeyLine == 0xFF) return 0;
+	char cTest = (sense == 'A' ? kcChars:kbChars)[currentKeyLine];
+	return GFXIsKeyPressed(cTest);
+}
+
+void HWIEmulateKeyPress(char c) {
+	printf("Emulate %c being pressed\n",c);
 }

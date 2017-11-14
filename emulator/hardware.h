@@ -13,7 +13,11 @@
 #define _HARDWARE_H
 	
 void  HWIReset(void);
+BYTE8 HWIWaitNewDisplayScan(void);
+void  HWINextDisplayScanPulse(BYTE8 status);
 BYTE8 HWIGetDisplayDigit(BYTE8 digit);
 void  HWIEndFrame(void);
+void  HWIEmulateKeyPress(char c);
+BYTE8 HWICheckSenseLine(char sense);
 
 #endif

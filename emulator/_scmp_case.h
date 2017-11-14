@@ -95,21 +95,21 @@ case 0x2e: /**** db 2e ****/
 case 0x2f: /**** db 2f ****/
     break;
 case 0x30: /**** xpal p0 ****/
-    T8 = P0;P0 |= ((P0 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
+    T8 = P0;P0 = ((P0 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
 case 0x31: /**** xpal p1 ****/
-    T8 = P1;P1 |= ((P1 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
+    T8 = P1;P1 = ((P1 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
 case 0x32: /**** xpal p2 ****/
-    T8 = P2;P2 |= ((P2 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
+    T8 = P2;P2 = ((P2 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
 case 0x33: /**** xpal p3 ****/
-    T8 = P3;P3 |= ((P3 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
+    T8 = P3;P3 = ((P3 & 0xFF00)|AC);AC = T8;CYCLES += 8;break;
 case 0x34: /**** xpah p0 ****/
-    T8 = (P0 >> 8);P0 |= ((P0 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
+    T8 = (P0 >> 8);P0 = ((P0 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
 case 0x35: /**** xpah p1 ****/
-    T8 = (P1 >> 8);P1 |= ((P1 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
+    T8 = (P1 >> 8);P1 = ((P1 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
 case 0x36: /**** xpah p2 ****/
-    T8 = (P2 >> 8);P2 |= ((P2 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
+    T8 = (P2 >> 8);P2 = ((P2 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
 case 0x37: /**** xpah p3 ****/
-    T8 = (P3 >> 8);P3 |= ((P3 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
+    T8 = (P3 >> 8);P3 = ((P3 & 0x00FF)|(AC << 8));AC = T8;CYCLES += 8;break;
 case 0x38: /**** db 38 ****/
     break;
 case 0x39: /**** db 39 ****/
