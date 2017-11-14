@@ -1,0 +1,55 @@
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 1 - 14/11/2017 17:51:55
+
+
+       1/       0 :                     
+       2/       0 :                     	cpu 	sc/mp
+       3/       0 :                     
+       4/       0 : 08                  	nop
+       5/       1 : C4 2A               	ldi 	42
+       6/       3 : C8 03               	st 		temp
+       7/       5 :                     wait:
+       8/       5 : 90 FE               	jmp 	wait
+       9/       7 :                     temp:
+      10/       7 : 01                  	db 		1
+      11/       8 :                     
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 2 - 14/11/2017 17:51:55
+
+
+  symbol table (* = unused):
+  ------------------------
+
+*ARCHITECTURE :                                        x86_64-unknown-linux - |
+*BIGENDIAN :                      0 - | *BRANCHEXT :                      0 - |
+*CASESENSITIVE :                  0 - | *CONSTPI :        3.141592653589793 - |
+*DATE :                  14/11/2017 - | *FALSE :                          0 - |
+*FULLPMMU :                       1 - | *HAS64 :                          1 - |
+*HASDSP :                         0 - | *HASFPU :                         0 - |
+*HASPMMU :                        0 - | *INEXTMODE :                      0 - |
+*INLWORDMODE :                    0 - | *INMAXMODE :                      0 - |
+*INSRCMODE :                      0 - | *INSUPMODE :                      0 - |
+*LISTON :                         1 - | *MACEXP :                         1 - |
+*MOMCPU :                         C - | *MOMCPUNAME :                 SC/MP - |
+*NESTMAX :                      100 - | *PACKING :                        0 - |
+*PADDING :                        1 - | *RELAXED :                        0 - |
+ TEMP :                           7 C | *TIME :                    17:51:55 - |
+*TRUE :                           1 - | *VERSION :                     142F - |
+ WAIT :                           5 C |
+
+     30 symbols
+     28 unused symbols
+
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 3 - 14/11/2017 17:51:55
+
+
+  codepages:
+  ----------
+
+STANDARD (0 changed characters)
+
+
+0.00 seconds assembly time
+
+     11 lines source file
+      2 passes
+      0 errors
+      0 warnings

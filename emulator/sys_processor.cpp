@@ -9,8 +9,6 @@
 // *******************************************************************************************************************************
 // *******************************************************************************************************************************
 
-#ifdef WINDOWS
-#endif
 #include <stdio.h>
 #include "sys_processor.h"
 #include "hardware.h"
@@ -38,11 +36,6 @@ void CPUReset(void) {
 	AC = E = P0 = P1 = P2 = P3 = CARRY = STATUS = OVERFLOW = 0;
 	CYCLES = 0;DELAY4CYCLES = 0;
 	HWIReset();
-
-	ramMemory[1] = 0xC4;
-	ramMemory[2] = 0x42;
-	ramMemory[3] = 0xC8;
-	ramMemory[4] = 0x02;
 }
 
 // *******************************************************************************************************************************
@@ -66,7 +59,15 @@ void CPUReset(void) {
 
 BYTE8 CPUExecuteInstruction(void) {
 
+	if (DELAY4CYCLES == 0) {
+		T8 = FETCH();
+		switch(T8) {																// Do the selected opcode and phase.
+			#include "_scmp_case.h"
+		}
+	}
+
 	if (DELAY4CYCLES != 0) {														// DLY in progress
+		printf("%d\n",DELAY4CYCLES);
 		WORD16 remCycles = CYCLES_PER_FRAME - CYCLES;								// CYCLES left this frame
 		if (remCycles/4 < DELAY4CYCLES) {											// Not enough cycles
 			DELAY4CYCLES = DELAY4CYCLES - remCycles / 4;
@@ -78,10 +79,6 @@ BYTE8 CPUExecuteInstruction(void) {
 		}
 	}
 
-	T8 = FETCH();
-	switch(T8) {																	// Do the selected opcode and phase.
-		#include "_scmp_case.h"
-	}
 
 	if (CYCLES < CYCLES_PER_FRAME) return 0;										// Frame in progress, return 0.
 	CYCLES -= CYCLES_PER_FRAME;														// Adjust cycle counter
