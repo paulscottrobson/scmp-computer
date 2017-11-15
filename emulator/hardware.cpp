@@ -110,5 +110,5 @@ BYTE8 HWICheckSenseLine(char sense) {
 }
 
 void HWIEmulateKeyPress(char c) {
-	printf("Emulate %c being pressed\n",c);
+	printf("Emulate %c [%d] being pressed\n",c,c & 7;
 }

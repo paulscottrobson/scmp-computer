@@ -1,109 +1,119 @@
- AS V1.42 Beta [Bld 115] - source file test.asm - page 1 - 14/11/2017 21:16:15
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 1 - 15/11/2017 18:16:16
 
 
-       1/       0 :                     ;
-       2/       0 :                     ;		Bootloader 1 - toggled in via toggle switches. Allows entering of code using
-       3/       0 :                     ;		the keypad in the 9-2 C quasi octal format.
+       1/       0 :                     ; ***********************************************************************************************
+       2/       0 :                     ;
+       3/       0 :                     ;					Bootloader 2. Displays AAA.DDD in octal. Writes to page 1xx
        4/       0 :                     ;
-       5/       0 :                     ;
-       6/       0 :                     	cpu 	sc/mp
-       7/       0 :                     
-       8/       0 : 08                  	nop
-       9/       1 :                     
-      10/       1 :                     keynotpressed:
-      11/       1 : 03                  	scl 						; can echo on first press as key not pressed
-      12/       2 :                     
-      13/       2 :                     waitD0:
-      14/       2 : 19                  	sio 						; wait for D0 to go to logic '1'
-      15/       3 : 40                  	lde
-      16/       4 : 94 FC               	jp 		waitD0
-      17/       6 :                     
-      18/       6 : 8F 00               	dly 	00 					; step into up pulse.
-      19/       8 : C4 F7               	ldi 	0xF7 				; D0 = F8, D8 = FF
-      20/       A :                     scan:
-      21/       A : 01                  	xae 						; save in P3.L and E	
-      22/       B : 40                  	lde
-      23/       C : 33                  	xpal 	p3 					
-      24/       D :                     
-      25/       D : 06                  	csa 						; check keyboard
-      26/       E : D4 30               	ani 	0x30 		
-      27/      10 : 98 0F               	jz 		nokeypressed 		; no key pressed, skip out.
-      28/      12 :                     
-      29/      12 : 40                  	lde
-      30/      13 : 32                  	xpal 	p2 					; put key in p2.L
-      31/      14 :                     
-      32/      14 : 06                  	csa 				 		; if echoed already (carry is clear) don't re-echo it.		
-      33/      15 : 94 0A               	jp 		nokeypressed
-      34/      17 :                     
-      35/      17 : 40                  	lde 						; get key D0-D8. We want to set F1 for D8 and F0 for D0-7
-      36/      18 : E4 FF               	xri 	0xFF				; now 0 if D8, #- for D0-D7
-      37/      1A : 98 02               	jz 		notD0to7
-      38/      1C : C4 03               	ldi 	3 					; now 0 if D8, 3 if D0-D7
-      39/      1E :                     notD0to7:
-      40/      1E : E4 82               	xri 	0x82 				; now $82 if D8, $81 if D0-D7
-      41/      20 : 07                  	cas 						; write to flags.
-      42/      21 :                     
-      43/      21 :                     nokeypressed:
-      44/      21 : 8F 03               	dly 	03 					; output possibly, go to next key,
-      45/      23 : 06                  	csa 						; clear everything except the carry flag.
-      46/      24 : D4 80               	ani 	0x80
-      47/      26 : 07                  	cas
-      48/      27 :                     
-      49/      27 : C7 01               	ld 		@1(p3) 				; bump P3.L and do each key in turn.
-      50/      29 : 33                  	xpal 	p3
-      51/      2A : 9C DE               	jnz 	scan 			
-      52/      2C :                     
-      53/      2C : 32                  	xpal 	p2 					; check if no key had been pressed.
-      54/      2D : 98 D2               	jz 		keynotpressed 		; then we can go back, resetting the CY/L bit.
-      55/      2F :                     
-      56/      2F : E4 FF               	xri 	0xFF 				; so now C/1 = 0 and 2-9 are 1-8
-      57/      31 : 01                  	xae 						; save in E
-      58/      32 : 06                  	csa 						; if CY/L = 0 already processed
-      59/      33 : 94 CD               	jp 		waitD0
-      60/      35 :                     
- AS V1.42 Beta [Bld 115] - source file test.asm - page 2 - 14/11/2017 21:16:15
+       5/       0 :                     ; ***********************************************************************************************
+       6/       0 :                     
+       7/       0 :                     	cpu 	sc/mp
+       8/       0 :                     
+       9/       0 :                     
+      10/       0 :                     bootloader:
+      11/       0 : 08                  	nop 								
+      12/       1 :                     
+      13/       1 :                     RepaintBuffer:
+      14/       1 : C4 F2               	ldi 	0xF2 								; put C in start of buffer
+      15/       3 : C8 42               	st 		buffer
+      16/       5 : C4 46               	ldi 	buffer 								; buffer
+      17/       7 :                     __RPEntry:	
+      18/       7 : 31                  	xpal 	p1
+      19/       8 :                     RepaintBufferChar:
+      20/       8 : 19                  	sio 										; wait for code.
+      21/       9 : 40                  	lde
+      22/       A : 94 F5               	jp 		RepaintBuffer
+      23/       C : 8F 00               	dly 	00
+      24/       E : C4 70               	ldi 	0x70 								; counter
+      25/      10 :                     __RPLoop:
+      26/      10 : 01                  	xae
+      27/      11 : 06                  	csa 										; check for key press
+      28/      12 : D4 30               	ani 	0x30
+      29/      14 : 98 02               	jz 		__RPNoKey
+      30/      16 : 40                  	lde											; key pressed, put in P2.L
+      31/      17 : 32                  	xpal 	p2
+      32/      18 :                     __RPNoKey:
+      33/      18 : C1 00               	ld 		(p1) 								; is it the current character ?
+      34/      1A : 60                  	xre
+      35/      1B : D4 F0               	ani 	0xF0
+      36/      1D : 9C 05               	jnz 	__RPNoSet
+      37/      1F : C1 00               	ld 		(p1) 								; re-read it
+      38/      21 : D4 03               	ani 	0x03 	 							; isolate the flag bits
+      39/      23 : 07                  	cas 										; copy to Status register
+      40/      24 :                     __RPNoSet:
+      41/      24 : 8F 03               	dly 	03 									; next Data line
+      42/      26 : C4 10               	ldi 	0x10 								; A = $10, also used to Clear F0,F1 and CY/L
+      43/      28 : 07                  	cas											
+      44/      29 : 70                  	ade											; add current position to it.
+      45/      2A : 9C E4               	jnz 	__RPLoop
+      46/      2C : C4 72               	ldi 	0x72 								; overwrite character with zero
+      47/      2E : CD 01               	st 		@1(p1) 								; and point to next character
+      48/      30 : C1 00               	ld 		(p1)								; read the next character
+      49/      32 : 9C D4               	jnz 	RepaintBufferChar
+      50/      34 : C8 18               	st 		emptybuffer 						; make sure emptybuffer is empty
+      51/      36 :                     
+      52/      36 : 32                  	xpal 	p2 									; if non-zero key pressed, also clears P2.L
+      53/      37 : 9C 06               	jnz 	__KeyPressed
+      54/      39 :                     
+      55/      39 :                     __KeepScanning:
+      56/      39 : C8 0B               	st 		lastkey 							; save as last key pressed.
+      57/      3B :                     __KeepScanningNoLK:
+      58/      3B : C4 4D               	ldi 	emptybuffer 						; redo with an empty buffer, just scan keyboard	
+      59/      3D : 90 C8               	jmp 	__RPEntry
+      60/      3F :                     
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 2 - 15/11/2017 18:16:16
 
 
-      61/      35 : 40                  	lde 						; actually do stuff.
-      62/      36 : C8 07               	st 		count+1
-      63/      38 : A8 04               	ild 	count
-      64/      3A :                     
-      65/      3A : 02                  	ccl 						; now carry clear cannot be re-echoed until key is released.	
-      66/      3B : 90 C5               	jmp 	waitD0				; this will keep going until released.
-      67/      3D :                     
-      68/      3D :                     
-      69/      3D : 00                  count:db 	0
-      70/      3E :                     
-      71/      3E :                     
- AS V1.42 Beta [Bld 115] - source file test.asm - page 3 - 14/11/2017 21:16:15
+      61/      3F :                     __KeyPressed:
+      62/      3F : E0 05               	xor 	lastkey 					
+      63/      41 : 98 F8               	jz 		__KeepScanningNoLK
+      64/      43 :                     
+      65/      43 : 90 FE               w1:	jmp 	w1
+      66/      45 :                     
+      67/      45 :                     lastkey:
+      68/      45 : 00                  	db 		0
+      69/      46 :                     
+      70/      46 :                     buffer:
+      71/      46 : 72                  	db 		0x72 								; 'C'											
+      72/      47 : 72 72 72 72 72 72   	db 		0x72,0x72,0x72,0x72,0x72,0x72		; 0 0 0 0 0 0
+      73/      4D :                     emptybuffer:
+      74/      4D : 00 00               	db 		0,0 								; a buffer with nothing in it.
+      75/      4F :                     
+      76/      4F :                     
+      77/      4F : FF                  	db 		0xFF	
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 3 - 15/11/2017 18:16:16
 
 
   symbol table (* = unused):
   ------------------------
 
 *ARCHITECTURE :                                        x86_64-unknown-linux - |
-*BIGENDIAN :                      0 - | *BRANCHEXT :                      0 - |
+*BIGENDIAN :                      0 - | *BOOTLOADER :                     0 C |
+*BRANCHEXT :                      0 - |  BUFFER :                        46 C |
 *CASESENSITIVE :                  0 - | *CONSTPI :        3.141592653589793 - |
- COUNT :                         3D C | *DATE :                  14/11/2017 - |
+*DATE :                  15/11/2017 - |  EMPTYBUFFER :                   4D C |
 *FALSE :                          0 - | *FULLPMMU :                       1 - |
 *HAS64 :                          1 - | *HASDSP :                         0 - |
 *HASFPU :                         0 - | *HASPMMU :                        0 - |
 *INEXTMODE :                      0 - | *INLWORDMODE :                    0 - |
 *INMAXMODE :                      0 - | *INSRCMODE :                      0 - |
-*INSUPMODE :                      0 - |  KEYNOTPRESSED :                  1 C |
+*INSUPMODE :                      0 - |  LASTKEY :                       45 C |
 *LISTON :                         1 - | *MACEXP :                         1 - |
 *MOMCPU :                         C - | *MOMCPUNAME :                 SC/MP - |
-*NESTMAX :                      100 - |  NOKEYPRESSED :                  21 C |
- NOTD0TO7 :                      1E C | *PACKING :                        0 - |
+*NESTMAX :                      100 - | *PACKING :                        0 - |
 *PADDING :                        1 - | *RELAXED :                        0 - |
- SCAN :                           A C | *TIME :                    21:16:15 - |
-*TRUE :                           1 - | *VERSION :                     142F - |
- WAITD0 :                         2 C |
+ REPAINTBUFFER :                  1 C |  REPAINTBUFFERCHAR :              8 C |
+*TIME :                    18:16:16 - | *TRUE :                           1 - |
+*VERSION :                     142F - |  W1 :                            43 C |
+*__KEEPSCANNING :                39 C |  __KEEPSCANNINGNOLK :            3B C |
+ __KEYPRESSED :                  3F C |  __RPENTRY :                      7 C |
+ __RPLOOP :                      10 C |  __RPNOKEY :                     18 C |
+ __RPNOSET :                     24 C |
 
-     34 symbols
-     28 unused symbols
+     42 symbols
+     30 unused symbols
 
- AS V1.42 Beta [Bld 115] - source file test.asm - page 4 - 14/11/2017 21:16:15
+ AS V1.42 Beta [Bld 115] - source file test.asm - page 4 - 15/11/2017 18:16:16
 
 
   codepages:
@@ -114,7 +124,7 @@ STANDARD (0 changed characters)
 
 0.00 seconds assembly time
 
-     71 lines source file
+     77 lines source file
       2 passes
       0 errors
       0 warnings

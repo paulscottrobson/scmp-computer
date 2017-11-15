@@ -1,14 +1,14 @@
 #define  READ(x)   ramMemory[(x) & 0xFFF]
 #define  WRITE(x)  ramMemory[(x) & 0xFFF] = AC
 #define  FETCH()   READ(++P0)
-#define  EACIX(p)  _eacix(p)
-#define  EACIXNOE(p)  _eacixnoe(p)
+#define  EACIX(p)  _eacix(&p)
+#define  EACIXNOE(p)  _eacixnoe(&p)
 #define  EACAIX(p)   _eacaix(&p)
-static inline WORD16 _eacix(WORD16 p) {
+static inline WORD16 _eacix(WORD16 *p) {
  T8 = FETCH();
  if (T8 == 0x80) T8 = E;
- if (T8 & 0x80) return (T8 | 0xFF00) + p + 1;
- return T8 + p + 1;
+ if (T8 & 0x80) return (T8 | 0xFF00) + *p;
+ return T8 + *p;
 }
 static inline WORD16 _eacaix(WORD16 *p) {
  T8 = FETCH();
@@ -22,10 +22,10 @@ static inline WORD16 _eacaix(WORD16 *p) {
   return T16;
  }
 }
-static inline WORD16 _eacixnoe(WORD16 p) {
+static inline WORD16 _eacixnoe(WORD16 *p) {
  T8 = FETCH();
- if (T8 & 0x80) return (T8 | 0xFF00) + p + 1;
- return T8 + p + 1;
+ if (T8 & 0x80) return (T8 | 0xFF00) + *p;
+ return T8 + *p;
 }
 static void _decimalAdd() {
  T16 = (T8 & 0x0F) + (AC & 0x0F) + CARRY;
