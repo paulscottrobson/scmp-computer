@@ -1,5 +1,19 @@
 ; ***********************************************************************************************
 ;
+;											Bootloader
+;											==========
+;
+;		A very primitive (84 byte) monitor to be entered initially. When run it starts at
+;		address $0060 which is shown on the display (in binary).
+;
+;		Pressing either '1' or 'C' shows the memory contents when the key is pressed, and
+;		advances to the next slot. 'C' is for copy, which copies the toggle into the 
+;		memory address just displayed.
+;	
+;		Pressing C+1 together runs the program from $0060 (e.g. the first instruction is
+;		there)
+;
+;		It's primitive, but it is useable to directly enter code.
 ;
 ; ***********************************************************************************************
 
@@ -7,7 +21,7 @@
 
 bootloader:
 	nop 
-
+	ld 		@0x60(p1)							; start at $0060
 __currentAddressX1:	
 	xpal 	p1 									; get P1.L
 	xae 										; put into E
@@ -17,14 +31,14 @@ __currentAddressX1:
 ;	Refresh the display with the value in E
 ;
 refreshDisplayWithE:	
-	ldi 	0x82 								; put first character to send ($82, 'C') in P3.H
+	ldi 	0x02 								; put first character to send ($02, 'C') in P3.H
 	xpah 	p3
 	ldi 	9 									; chars to send in P3.L
 refreshDisplayOnceIfACZero:	
 	ori 	1
 writeKeystroke:									; write the next keystroke
 	xpal 	p3 									; put back in P3.L counter.
-	xae 										; wait for D0
+	xae 										; wait for D8
 	sio
 	xae
 	jp 		writeKeyStroke
@@ -35,11 +49,11 @@ writeKeystroke:									; write the next keystroke
 	xpal 	p2 									; put in P2.L
 
 	xpah 	p3 									; recover character to transmit
-	jp 		notD8 								; if +ve, don't skip to D8.
+	jp 		notD0 								; if +ve, don't skip to D0
 	xpah 	p3 									; save back
 	dly 	03*8 								; skip to D8
 	xpah 	p3 									; restore.
-notD8:
+notD0:
 	cas 										; write to F0/F1.
 
 	dly 	03 									; wait till next scan position.
@@ -53,7 +67,7 @@ notD8:
 	csa 										; get SR
 	ani 	0x80 								; now $00 (NC) $80 (C)
 	adi 	0x01 								; now $01 (NC) $82 (C)
-	xri 	0x03 								; now $02 (NC) $81 (C)
+	xri 	0x83 								; switch them round.
 	xpah 	p3 									; put in character to write.
 
 	ld 		@-1(p3) 							; decrement counter
@@ -72,8 +86,11 @@ __lastKeyStatusX1:
 	st 		__lastKeyStatusX1+1 				; update the last key status.
 	jz 		__currentAddressX1 					; if released display current address.
 
-	ani 	0x20 								; was SB pressed (e.g. zero)
-	jz 		advance 							; if not, it was nine which is advance only
+	xri 	0x30 								; invert bits, so if both keys pressed
+	jz 		0x60 								; will be zero, and run from $0060 if so.
+
+	ani 	0x20 								; was SB pressed (e.g. 'C')
+	jnz 	advance 							; if not, it was '1' which is advance only
 
 												; pressing 0 copies the toggles in.
 	ld 		0xFFF 								; read keyboard toggles
@@ -83,8 +100,4 @@ advance:
 	ld 		@1(p1) 								; read the byte there and bump P1.
 	xae 										; into E
 	jmp 	refreshDisplayWithE 				; display that
-
-
-
-
 

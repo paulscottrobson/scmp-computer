@@ -26,7 +26,7 @@
 
 	Outputs from Chip
 	=================
-	D0 goes to logic 1 at start of sequence 			to SIN
+	D8 goes to logic 1 at start of sequence 			to SIN
 	KB (key pressed on 0 + others) 						to SB
 	KC (1-9) 											to SA
 
@@ -34,7 +34,7 @@
 	=========
 
 	SIO 	resets the sequence, this always puts a '1' on E bit 7 (though it should
-			still be tested). currentKeyLine is set to 0.
+			still be tested). currentKeyLine is set to 0 (actually D8 as it runs backwards).
 			At this point, SA + SB represent the state of the current key selected 
 			on KC and KB. (Initially 0 (KB) and 9 (KC)). Active high.
 
@@ -53,8 +53,10 @@
 */
 
 static BYTE8 currentKeyLine;
-static const char *kbChars = "0.%:*-+=C?";
-static const char *kcChars = "987654321?";
+static const char *kbChars = "C=+-&:%.0?";
+static const char *kcChars = "123456789?";
+static char display[9];
+static BYTE8 dpPos;
 
 // *********************************************************************************************
 //											Hardware Reset
@@ -62,6 +64,7 @@ static const char *kcChars = "987654321?";
 
 void HWIReset(void) {
 	currentKeyLine = 0xFF;
+	HWIEmulateKeyPress('C');
 }
 
 // *********************************************************************************************
@@ -102,7 +105,10 @@ void  HWINextDisplayScanPulse(BYTE8 status) {
 // *********************************************************************************************
 
 BYTE8 HWIGetDisplayDigit(BYTE8 digit) {
-	return (digit & 1) ? digit : digit+16;
+	if (digit >= strlen(display)) {
+		return 0xFF;
+	}
+	return (display[digit] & 0x0F);	
 }
 
 // *********************************************************************************************
@@ -121,6 +127,25 @@ BYTE8 HWICheckSenseLine(char sense) {
 
 void HWIEmulateKeyPress(char c) {
 	printf("Emulate %c being pressed\n",c);
+	if (c == 'C') {
+		display[0] = '0';
+		display[1] = '\0';
+		dpPos = 0xFF;		
+	}
+	if (c == '.' && dpPos == 0xFF) {
+		dpPos = strlen(display);
+	}
+	if (c >= '0' && c <= '9') {
+		if (display[0] == '0' && display[1] == '\0' && dpPos == 0xFF) {
+			display[0] = c;
+		} else {
+			if (strlen(display) < 8) {
+				char *p = display + strlen(display);
+				*p++ = c;
+				*p++ = '\0';
+			}
+		}
+	}
 }
 
 // *********************************************************************************************

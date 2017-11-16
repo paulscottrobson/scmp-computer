@@ -45,6 +45,35 @@ static BYTE8 inline __read(WORD16 addr) {
 
 #endif
 
+// *********************************************************************************************
+//
+//		This is identical accept it has 2k RAM mapped from 000-07F and the keyboard from
+//		080-0FF. This effectively replaces the RAM chips with larger ones.
+//
+// *********************************************************************************************
+
+#ifdef MODEL2KRAM 
+
+#define MAPPING_4K								// We don't bother to properly calculate the EAC as A12-15 are ignored
+//#define USE_OVERFLOW							// Uncomment this to set OV on CAD/CAI/ADD/ADI
+
+#define RAMSIZE 	(2048)						// Memory size. needs to be set
+static BYTE8 ramMemory[RAMSIZE];				// RAM memory, needs to be defined
+
+#define READ(x) 	__read(x)					// Read including I/O hardware
+#define WRITE(x)	ramMemory[(x) & 0x7FF] = AC	// Write AC to memory.
+#define FETCH()		READ(++P0)					// Can be optimised so doesn't access hardware.
+
+static BYTE8 inline __read(WORD16 addr) {
+	if ((addr & 0x800) == 0) {
+		return ramMemory[addr & 0x7FF];
+	}
+	return HWIReadDataToggles();
+}
+
+#endif
+
+
 #ifdef MAPPING_4K
 #define 	EACIX(p)		_eac4kix(&p)
 #define 	EACIXNOE(p)		_eac4kixnoe(&p)

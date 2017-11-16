@@ -32,9 +32,9 @@ static const char* _mnemonics[256] =
 static const int patterns[] = { 0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x67 };
 
 void DBGXDigit(int x,int y,int xs,int ys,int digit) {
-	if (digit < 0) return;
 	int pattern = patterns[digit & 0x0F];
 	if (digit & 0x10) pattern |= 0x80;
+	if (digit == 0xFF) pattern = 0x00;
 	DBGXPattern(x,y,xs,ys,pattern);
 }
 
@@ -44,7 +44,7 @@ void DBGXPattern(int x,int y,int xs,int ys,int pattern) {
 	GFXRectangle(&rc,0xFFF);
 	rc.x++;rc.y++;rc.w -= 2;rc.h -= 2;
 	GFXRectangle(&rc,0x000);
-	int w = 3;
+	int w = 6;
 	x = x + 8;y = y + 8 - w/2;xs = xs - 20;ys = ys - 16;
 	rc.x = x;rc.y = y;rc.w = xs;rc.h = w;
 	if (pattern & 0x01) GFXRectangle(&rc,0xF00);
