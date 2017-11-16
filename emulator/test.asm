@@ -1,77 +1,69 @@
 ; ***********************************************************************************************
 ;
-;					Bootloader 2. Displays AAA.DDD in octal. Writes to page 1xx
 ;
 ; ***********************************************************************************************
 
 	cpu 	sc/mp
 
-
 bootloader:
-	nop 								
-
-RepaintBuffer:
-	ldi 	0xF2 								; put C in start of buffer
-	st 		buffer
-	ldi 	buffer 								; buffer
-__RPEntry:	
-	xpal 	p1
-RepaintBufferChar:
-	sio 										; wait for code.
-	lde
-	jp 		RepaintBuffer
-	dly 	00
-	ldi 	0x70 								; counter
-__RPLoop:
+	nop 
+	ldi 	0xA5 									; value in P3.H
+	xpah 	p3 	
+	ldi	 	0x82									; start with $82 (C)
 	xae
-	csa 										; check for key press
-	ani 	0x30
-	jz 		__RPNoKey
-	lde											; key pressed, put in P2.L
-	xpal 	p2
-__RPNoKey:
-	ld 		(p1) 								; is it the current character ?
-	xre
-	ani 	0xF0
-	jnz 	__RPNoSet
-	ld 		(p1) 								; re-read it
-	ani 	0x03 	 							; isolate the flag bits
-	cas 										; copy to Status register
-__RPNoSet:
-	dly 	03 									; next Data line
-	ldi 	0x10 								; A = $10, also used to Clear F0,F1 and CY/L
-	cas											
-	ade											; add current position to it.
-	jnz 	__RPLoop
-	ldi 	0x72 								; overwrite character with zero
-	st 		@1(p1) 								; and point to next character
-	ld 		(p1)								; read the next character
-	jnz 	RepaintBufferChar
-	st 		emptybuffer 						; make sure emptybuffer is empty
+	ldi 	0x80-9									; loop counter in P3.L
+	xpal 	p3
 
-	xpal 	p2 									; if non-zero key pressed, also clears P2.L
-	jnz 	__KeyPressed
+__nextDigit:	
+waitD0:
+	xae
+	sio
+	xae
+	jp 		waitD0
+	dly 	00
 
-__KeepScanning:
-	st 		lastkey 							; save as last key pressed.
-__KeepScanningNoLK:
-	ldi 	emptybuffer 						; redo with an empty buffer, just scan keyboard	
-	jmp 	__RPEntry
+	xpal 	p3 										; check if finished *after* reset to D0
+	jp 		__doNextDigitOut
 
-__KeyPressed:
-	xor 	lastkey 					
-	jz 		__KeepScanningNoLK
-
-w1:	jmp 	w1
-
-lastkey:
-	db 		0
-
-buffer:
-	db 		0x72 								; 'C'											
-	db 		0x72,0x72,0x72,0x72,0x72,0x72		; 0 0 0 0 0 0
-emptybuffer:
-	db 		0,0 								; a buffer with nothing in it.
+	xpal 	p3 										; fix P3 back so we can loop around.
+	csa 											; check if it has changed
+	ani 	0x30 									; only interested in SA + SB
+__lastKey:	
+	xri		0x00
+	jz 		waitD0  								; check if it's changed.
+	xor 	__lastKey+1								; update last key vaue
+	st 		__lastKey+1
 
 
-	db 		0xFF	
+__doNextDigitOut:
+	xpal 	p3
+
+	lde												; $82 = C $81 = 1 $02 = 0
+	jp 		__writeSASB
+	dly 	8 * 3 									; skip straight to D8.
+	lde 											; reload current value
+__writeSASB:
+	cas 											; output the lower bits to F0/F1 and CY/L ?
+	dly 	3 										; wait end of pulse
+	ldi 	0 										; clear F0/F1
+	cas 
+
+	xpah 	p3 										; get number being displayed, 
+	xae 											; shift left into carry.
+	lde
+	ade
+	xpah 	p3 										; save it back, A will be cleared 
+
+	csa 											; get $81 or $02 in AC.
+	ani 	0x80
+	adi		0x01
+	xri 	0x03
+	xae 											; put back in E
+
+	ld 		@1(p3) 									; inc loop counter
+	jmp 	__nextDigit 							; do the next digit.
+
+__endofrefresh:
+	
+
+

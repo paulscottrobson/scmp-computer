@@ -11,22 +11,16 @@
 //	Note 3:	ADD and CAD do not affect the overflow flag.
 //	Note 4: Code relies on AC being 8 bit and P0-P3 being 16 bit.
 
-:#define 	READ(x) 		ramMemory[(x) & 0xFFF]
-:#define 	WRITE(x)		ramMemory[(x) & 0xFFF] = AC
-:#define 	FETCH()			READ(++P0)
+// ***************************************************************************************
 
-:#define 	EACIX(p)		_eacix(&p)
-:#define 	EACIXNOE(p)		_eacixnoe(&p)
-:#define 	EACAIX(p) 		_eacaix(&p)
-
-:static inline WORD16 _eacix(WORD16 *p) {
+:static inline WORD16 _eac4kix(WORD16 *p) {
 :	T8 = FETCH();
 :	if (T8 == 0x80) T8 = E;
 :	if (T8 & 0x80) return (T8 | 0xFF00) + *p;
 :	return T8 + *p;
 :}
 
-:static inline WORD16 _eacaix(WORD16 *p) {
+:static inline WORD16 _eac4kaix(WORD16 *p) {
 :	T8 = FETCH();
 :	if (T8 == 0x80) T8 = E;
 :	if (T8 & 0x80) {
@@ -39,7 +33,7 @@
 :	}
 :}
 
-:static inline WORD16 _eacixnoe(WORD16 *p) {
+:static inline WORD16 _eac4kixnoe(WORD16 *p) {
 :	T8 = FETCH();
 :	if (T8 & 0x80) return (T8 | 0xFF00) + *p;
 :	return T8 + *p;
@@ -101,7 +95,12 @@ FD-FF 	20 	"CAD @%D(P%P)"		T8 = READ(EACAIX(P%P)) ^ 0xFF;BINARYADD()
 78 		8 	"CAE"				T8 = E ^ 0xFF;BINARYADD()
 
 :#define BINARYADD() 	T16 = CARRY+AC+T8;OVERFLOW();AC = T16 & 0xFF;CARRY = (T16 >> 8) & 1
+
+:#ifdef  USEOVERFLOW
+:#define OVERFLOW() 	OVERFLOW = ((((AC^T8) & 0x80) == 0) && (((AC^T16) & 0x80) == 0)) ? 1 : 0
+:#else
 :#define OVERFLOW() 	{}
+:#endif 
 
 // ***************************************************************************************
 
@@ -140,7 +139,7 @@ B8-BB 	22 	"DLD %D(P%P)"		T16 = EACIXNOE(P%P);AC = READ(T16)-1;WRITE(T16)
 07 		6 	"CAS"				STATUS = AC;OVERFLOW = (AC >> 6) & 1;CARRY = (AC >> 7) & 1;UPDATESASB();FLAGS(AC & 7)
 
 :#define UPDATESASB()	STATUS = (STATUS & 0xCF) | (SENSEA() ? 0x10:0x00) | (SENSEB() ? 0x20:0x00);
-:#define UPDATEOVCY() 	STATUS = (STATUS & 0x3F) | (OVERFLOW << 6) | (CARRY << 7);	
+:#define UPDATEOVCY()  	STATUS = (STATUS & 0x3F) | ((OVERFLOW!=0) ? 64:0) | ((CARRY!=0) ? 128:0x00);
 
 :static BYTE8 getStatus() {
 :	UPDATESASB();UPDATEOVCY();

@@ -13,7 +13,7 @@ clean:
 SDL_CFLAGS := $(shell sdl2-config --cflags)
 SDL_LDFLAGS := $(shell sdl2-config --libs)
 
-CFLAGS := $(SDL_CFLAGS) -O2 -Wall -DINCLUDE_DEBUGGING_SUPPORT -I. -I./framework -I./common -Wno-unused-variable
+CFLAGS := $(SDL_CFLAGS) -O2 -Wall -DBASEMODEL -DINCLUDE_DEBUGGING_SUPPORT -I. -I./framework -I./common -Wno-unused-variable
 LDFLAGS := $(SDL_LDFLAGS) -lSDL2_image
 
 scmpmc : $(FSOURCES) $(CSOURCES)
