@@ -7,63 +7,84 @@
 
 bootloader:
 	nop 
-	ldi 	0xA5 									; value in P3.H
-	xpah 	p3 	
-	ldi	 	0x82									; start with $82 (C)
-	xae
-	ldi 	0x80-9									; loop counter in P3.L
-	xpal 	p3
 
-__nextDigit:	
-waitD0:
-	xae
+__currentAddressX1:	
+	xpal 	p1 									; get P1.L
+	xae 										; put into E
+	lde 										; copy back into P1.L
+	xpal 	p1
+;
+;	Refresh the display with the value in E
+;
+refreshDisplayWithE:	
+	ldi 	0x82 								; put first character to send ($82, 'C') in P3.H
+	xpah 	p3
+	ldi 	9 									; chars to send in P3.L
+refreshDisplayOnceIfACZero:	
+	ori 	1
+writeKeystroke:									; write the next keystroke
+	xpal 	p3 									; put back in P3.L counter.
+	xae 										; wait for D0
 	sio
 	xae
-	jp 		waitD0
-	dly 	00
+	jp 		writeKeyStroke
+	dly 	00									; short delay in.
 
-	xpal 	p3 										; check if finished *after* reset to D0
-	jp 		__doNextDigitOut
+	csa 										; get status of SA/SB
+	ani 	0x30
+	xpal 	p2 									; put in P2.L
 
-	xpal 	p3 										; fix P3 back so we can loop around.
-	csa 											; check if it has changed
-	ani 	0x30 									; only interested in SA + SB
-__lastKey:	
-	xri		0x00
-	jz 		waitD0  								; check if it's changed.
-	xor 	__lastKey+1								; update last key vaue
-	st 		__lastKey+1
+	xpah 	p3 									; recover character to transmit
+	jp 		notD8 								; if +ve, don't skip to D8.
+	xpah 	p3 									; save back
+	dly 	03*8 								; skip to D8
+	xpah 	p3 									; restore.
+notD8:
+	cas 										; write to F0/F1.
 
-
-__doNextDigitOut:
-	xpal 	p3
-
-	lde												; $82 = C $81 = 1 $02 = 0
-	jp 		__writeSASB
-	dly 	8 * 3 									; skip straight to D8.
-	lde 											; reload current value
-__writeSASB:
-	cas 											; output the lower bits to F0/F1 and CY/L ?
-	dly 	3 										; wait end of pulse
-	ldi 	0 										; clear F0/F1
+	dly 	03 									; wait till next scan position.
+	ldi 	0 									; clear F0, F1 and CY/L.	
 	cas 
 
-	xpah 	p3 										; get number being displayed, 
-	xae 											; shift left into carry.
-	lde
+	lde 										; shift E left into CY/L
 	ade
-	xpah 	p3 										; save it back, A will be cleared 
+	xae
 
-	csa 											; get $81 or $02 in AC.
-	ani 	0x80
-	adi		0x01
-	xri 	0x03
-	xae 											; put back in E
+	csa 										; get SR
+	ani 	0x80 								; now $00 (NC) $80 (C)
+	adi 	0x01 								; now $01 (NC) $82 (C)
+	xri 	0x03 								; now $02 (NC) $81 (C)
+	xpah 	p3 									; put in character to write.
 
-	ld 		@1(p3) 									; inc loop counter
-	jmp 	__nextDigit 							; do the next digit.
+	ld 		@-1(p3) 							; decrement counter
+	xpal 	p3 									; check it.
+	jnz 	writeKeystroke 						; go do the next keystroke.
+	xpah 	p3 									; zero 'to write' in P3.H now.
 
-__endofrefresh:
-	
+	xpal 	p2 									; get key press value from P2.L
+	xae 										; put in E.
+__lastKeyStatusX1:
+	ldi 	00									; get last key pressed
+	xre 										; has it changed ?
+	jz  	refreshDisplayOnceIfAcZero			; if not, keep scanning the keyboard.
+
+	lde 										; get the value from the keyboard.
+	st 		__lastKeyStatusX1+1 				; update the last key status.
+	jz 		__currentAddressX1 					; if released display current address.
+
+	ani 	0x20 								; was SB pressed (e.g. zero)
+	jz 		advance 							; if not, it was nine which is advance only
+
+												; pressing 0 copies the toggles in.
+	ld 		0xFFF 								; read keyboard toggles
+	st 		(p1) 								; and save at current address
+
+advance:
+	ld 		@1(p1) 								; read the byte there and bump P1.
+	xae 										; into E
+	jmp 	refreshDisplayWithE 				; display that
+
+
+
 
 

@@ -47,6 +47,9 @@
 			line as far as 9 (when it is reset to $FF) thus allowing for next detection.
 			The state of the 'key press' (from F0/F1) is on the high/low transition.
 
+	The toggle switches can be gated onto the bus ; the technical address for this is
+	$0FFF though the address mapping varies from machine to machine.
+	
 */
 
 static BYTE8 currentKeyLine;
